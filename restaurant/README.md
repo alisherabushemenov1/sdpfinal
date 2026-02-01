@@ -1,128 +1,814 @@
-# Restaurant Management System
-### Implemented Using Design Patterns (Factory, Abstract Factory, Decorator, Observer, Builder, Strategy)
+# Online Course Platform - NoSQL Database Project
 
-This project is a console-based Restaurant Management System written in Java.
-It demonstrates how multiple Object-Oriented Design Patterns can work together within a cohesive and modular architecture.
+## 📋 Project Overview
 
-# Features
-### Cuisine Selection
+A comprehensive online learning platform built with MongoDB, Express.js, React, and Node.js (MERN stack). The platform enables instructors to create and manage courses while students can enroll, track progress, and rate courses.
 
-Italian
+### Team Members
+- Student 1: [Name] - Backend Development, Database Design
+- Student 2: [Name] - Frontend Development, API Integration
 
-Japanese
+## 🏗️ System Architecture
 
-### Order Builder
+### Technology Stack
+- **Frontend**: React 18, React Router, Axios
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT (JSON Web Tokens)
+- **Security**: bcryptjs for password hashing
 
-Users can add any number of:
+### Architecture Diagram
+```
+┌─────────────┐      HTTP/REST       ┌──────────────┐      Mongoose      ┌──────────────┐
+│   React     │ ◄──────────────────► │  Express.js  │ ◄─────────────────► │   MongoDB    │
+│  Frontend   │    JSON/JWT Auth     │   Backend    │   CRUD Operations   │   Database   │
+└─────────────┘                      └──────────────┘                     └──────────────┘
+```
 
-Main dishes
+## 📊 Database Schema
 
-Drinks
+### Collections and Relationships
 
-Desserts
+#### 1. Users Collection
+```javascript
+{
+  _id: ObjectId,
+  name: String,
+  email: String (unique, indexed),
+  password: String (hashed),
+  role: String (student/instructor/admin),
+  profile: {                        // Embedded Document
+    bio: String,
+    avatar: String,
+    phone: String,
+    address: {
+      street: String,
+      city: String,
+      country: String,
+      zipCode: String
+    }
+  },
+  stats: {                          // Embedded Document
+    coursesCompleted: Number,
+    totalLearningHours: Number,
+    certificatesEarned: Number
+  },
+  isActive: Boolean,
+  lastLogin: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
-### Toppings (Decorator Pattern)
+#### 2. Courses Collection
+```javascript
+{
+  _id: ObjectId,
+  title: String (indexed),
+  description: String,
+  instructor: ObjectId (ref: User),  // Referenced Document
+  category: String (indexed),
+  level: String,
+  price: Number,
+  thumbnail: String,
+  metadata: {                        // Embedded Document
+    duration: Number,
+    language: String,
+    totalLessons: Number,
+    enrollmentCount: Number
+  },
+  requirements: [String],            // Embedded Array
+  learningOutcomes: [String],        // Embedded Array
+  ratings: {                         // Embedded Document
+    average: Number,
+    count: Number
+  },
+  status: String,
+  publishedAt: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
-Cheese
+#### 3. Lessons Collection
+```javascript
+{
+  _id: ObjectId,
+  title: String,
+  description: String,
+  course: ObjectId (ref: Course),    // Referenced Document
+  order: Number (indexed),
+  content: {                         // Embedded Document
+    type: String (video/text/quiz/assignment),
+    videoUrl: String,
+    textContent: String,
+    duration: Number,
+    resources: [{
+      title: String,
+      url: String,
+      type: String
+    }]
+  },
+  isFree: Boolean,
+  isPublished: Boolean,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
-Spicy sauce
+#### 4. Enrollments Collection
+```javascript
+{
+  _id: ObjectId,
+  user: ObjectId (ref: User),        // Referenced Document
+  course: ObjectId (ref: Course),    // Referenced Document
+  progress: {                        // Embedded Document
+    completedLessons: [{
+      lesson: ObjectId (ref: Lesson),
+      completedAt: Date
+    }],
+    percentage: Number,
+    lastAccessedLesson: ObjectId (ref: Lesson),
+    lastAccessedAt: Date
+  },
+  status: String (active/completed/dropped),
+  rating: {                          // Embedded Document
+    score: Number,
+    review: String,
+    ratedAt: Date
+  },
+  enrolledAt: Date,
+  completedAt: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
-Both
+### Data Modeling Strategy
 
-None
+**Embedded vs Referenced:**
+- **Embedded**: Profile data, statistics, metadata (1-to-1 or 1-to-few)
+- **Referenced**: Users, courses, lessons (1-to-many or many-to-many)
 
-### Multiple Payment Methods (Strategy Pattern)
+**Compound Indexes:**
+1. `{ email: 1 }` - User lookup
+2. `{ title: 1, category: 1 }` - Course search
+3. `{ instructor: 1, status: 1 }` - Instructor dashboard
+4. `{ user: 1, course: 1 }` - Enrollment uniqueness
+5. `{ course: 1, status: 1 }` - Course analytics
+6. `{ course: 1, order: 1 }` - Lesson ordering
 
-Credit card
+## 🔌 API Documentation
 
-Cash
+### Base URL
+```
+http://localhost:5000/api
+```
 
-E-wallet
+### Authentication Endpoints
 
-### Observer Notifications
+#### Register User
+```http
+POST /auth/register
+Content-Type: application/json
 
-Order status changes automatically notify:
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "role": "student"
+}
 
-Customer
+Response: {
+  "success": true,
+  "data": {
+    "_id": "...",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "student",
+    "token": "jwt_token_here"
+  }
+}
+```
 
-Kitchen
+#### Login
+```http
+POST /auth/login
+Content-Type: application/json
 
-Delivery service
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
 
-### Statuses include:
+Response: {
+  "success": true,
+  "data": {
+    "_id": "...",
+    "name": "John Doe",
+    "token": "jwt_token_here"
+  }
+}
+```
 
-Received
+#### Get Current User
+```http
+GET /auth/me
+Authorization: Bearer {token}
 
-Preparing
+Response: {
+  "success": true,
+  "data": { user_object }
+}
+```
 
-Ready
+### Course Endpoints
 
-Out for delivery
+#### Get All Courses (with filtering, pagination, sorting)
+```http
+GET /courses?page=1&limit=10&category=programming&search=javascript&sort=-createdAt
 
-Delivered
+Response: {
+  "success": true,
+  "data": [ courses ],
+  "pagination": {
+    "total": 50,
+    "page": 1,
+    "pages": 5
+  }
+}
+```
 
-## Design Patterns Overview
-### Factory Pattern
+#### Get Single Course
+```http
+GET /courses/:id
 
-Responsible for creating specific dish objects such as:
+Response: {
+  "success": true,
+  "data": { course_with_instructor_and_lessons }
+}
+```
 
-Pizza, Pasta
+#### Create Course (Instructor/Admin only)
+```http
+POST /courses
+Authorization: Bearer {token}
+Content-Type: application/json
 
-Sushi, Ramen
+{
+  "title": "Complete JavaScript Course",
+  "description": "Learn JavaScript from scratch",
+  "category": "programming",
+  "level": "beginner",
+  "price": 99.99,
+  "requirements": ["Basic computer knowledge"],
+  "learningOutcomes": ["Master JavaScript", "Build web apps"]
+}
+```
 
-### Abstract Factory Pattern
+#### Update Course (Advanced operations)
+```http
+PUT /courses/:id
+Authorization: Bearer {token}
 
-Defines entire cuisine menus:
+{
+  "title": "Updated Title",
+  "price": 79.99,
+  "addRequirement": "HTML knowledge",
+  "removeRequirement": "Old requirement",
+  "metadata": {
+    "duration": 20,
+    "language": "English"
+  }
+}
 
-ItalianRestaurantFactory
+Uses: $set, $push, $pull, $inc operators
+```
 
-JapaneseRestaurantFactory
+#### Delete Course
+```http
+DELETE /courses/:id
+Authorization: Bearer {token}
 
-Each factory produces:
+Response: {
+  "success": true,
+  "data": {}
+}
+```
 
-Main dish
+#### Get Course Statistics (Aggregation)
+```http
+GET /courses/stats/overview
+Authorization: Bearer {token} (Admin only)
 
-Drink
+Response: {
+  "success": true,
+  "data": [
+    {
+      "_id": "programming",
+      "totalCourses": 25,
+      "averagePrice": 89.99,
+      "totalEnrollments": 1250,
+      "averageRating": 4.5
+    }
+  ]
+}
+```
 
-Dessert
+#### Get Instructor Analytics (Advanced Aggregation)
+```http
+GET /courses/stats/instructor/:instructorId
+Authorization: Bearer {token}
 
-### Decorator Pattern
+Response: {
+  "success": true,
+  "data": {
+    "courses": [...],
+    "totalRevenue": 15000,
+    "totalEnrollments": 500,
+    "totalCourses": 10
+  }
+}
+```
 
-Adds toppings dynamically without modifying base dish classes:
+### Enrollment Endpoints
 
-CheeseTopping
+#### Enroll in Course
+```http
+POST /enrollments
+Authorization: Bearer {token}
 
-SpicySauceTopping
+{
+  "courseId": "course_id_here"
+}
+```
 
-### Builder Pattern
+#### Get My Enrollments
+```http
+GET /enrollments/my-courses
+Authorization: Bearer {token}
 
-Constructs a complete Order step-by-step, allowing flexible composition of dishes.
+Response: {
+  "success": true,
+  "data": [ enrollments_with_courses ]
+}
+```
 
-### Observer Pattern
+#### Update Progress (Advanced update with $push)
+```http
+PUT /enrollments/:id/progress
+Authorization: Bearer {token}
 
-Multiple observers react to order status changes:
+{
+  "lessonId": "lesson_id_here"
+}
 
-Customer receives updates
+Updates: completedLessons array, progress percentage, status
+Uses: $push, $set, $inc
+```
 
-Kitchen receives preparation alerts
+#### Add Rating
+```http
+PUT /enrollments/:id/rating
+Authorization: Bearer {token}
 
-Delivery service receives readiness/delivery notifications
+{
+  "score": 5,
+  "review": "Great course!"
+}
+```
 
-### Strategy Pattern
+#### Unenroll
+```http
+DELETE /enrollments/:id
+Authorization: Bearer {token}
+```
 
-Allows runtime selection of payment methods:
+### Lesson Endpoints
 
-CreditCardPayment
+#### Get Course Lessons
+```http
+GET /lessons/course/:courseId
 
-CashPayment
+Response: {
+  "success": true,
+  "data": [ lessons_ordered_by_sequence ]
+}
+```
 
-EWalletPayment
+#### Create Lesson (Instructor/Admin only)
+```http
+POST /lessons
+Authorization: Bearer {token}
 
-## Diagram
+{
+  "title": "Introduction to Variables",
+  "course": "course_id",
+  "order": 1,
+  "content": {
+    "type": "video",
+    "videoUrl": "https://...",
+    "duration": 15
+  }
+}
+```
 
-![Diagram](diagram.PNG)
+#### Update Lesson
+```http
+PUT /lessons/:id
+Authorization: Bearer {token}
 
-## Conclusion
+{ updated_fields }
+```
 
-This project demonstrates how several classic software design patterns can be combined to create a modular, maintainable, and extensible restaurant management system.
-It serves as a practical example for students and developers learning real-world object-oriented design.
+#### Delete Lesson
+```http
+DELETE /lessons/:id
+Authorization: Bearer {token}
+```
+
+### User Endpoints
+
+#### Get All Users (Admin only)
+```http
+GET /users
+Authorization: Bearer {token}
+```
+
+#### Get User Profile
+```http
+GET /users/:id
+Authorization: Bearer {token}
+```
+
+#### Update Profile (Advanced nested update)
+```http
+PUT /users/:id
+Authorization: Bearer {token}
+
+{
+  "name": "Updated Name",
+  "bio": "My bio",
+  "address": {
+    "city": "New York",
+    "country": "USA"
+  }
+}
+
+Uses: $set for nested fields
+```
+
+## 🔍 MongoDB Queries and Operations
+
+### CRUD Operations
+
+#### Create
+```javascript
+// Insert new course
+await Course.create({
+  title: "Course Title",
+  instructor: userId,
+  // ... other fields
+});
+```
+
+#### Read
+```javascript
+// Find with population
+await Course.find({ status: 'published' })
+  .populate('instructor', 'name email')
+  .sort('-createdAt')
+  .limit(10);
+```
+
+#### Update - Advanced Operations
+```javascript
+// $set - Update specific fields
+await Course.findByIdAndUpdate(id, {
+  $set: { 
+    title: "New Title",
+    'metadata.duration': 20 
+  }
+});
+
+// $push - Add to array
+await Course.findByIdAndUpdate(id, {
+  $push: { requirements: "New requirement" }
+});
+
+// $pull - Remove from array
+await Course.findByIdAndUpdate(id, {
+  $pull: { requirements: "Old requirement" }
+});
+
+// $inc - Increment/Decrement
+await Course.findByIdAndUpdate(id, {
+  $inc: { 'metadata.enrollmentCount': 1 }
+});
+
+// Positional operators
+await Enrollment.findByIdAndUpdate(id, {
+  $push: {
+    'progress.completedLessons': {
+      lesson: lessonId,
+      completedAt: Date.now()
+    }
+  }
+});
+```
+
+#### Delete
+```javascript
+// Delete with cascade
+await Lesson.deleteMany({ course: courseId });
+await Enrollment.deleteMany({ course: courseId });
+await Course.findByIdAndDelete(courseId);
+```
+
+### Aggregation Framework
+
+#### Multi-Stage Pipeline 1: Course Statistics by Category
+```javascript
+await Course.aggregate([
+  // Stage 1: Filter published courses
+  {
+    $match: { status: 'published' }
+  },
+  // Stage 2: Group by category
+  {
+    $group: {
+      _id: '$category',
+      totalCourses: { $sum: 1 },
+      averagePrice: { $avg: '$price' },
+      totalEnrollments: { $sum: '$metadata.enrollmentCount' },
+      averageRating: { $avg: '$ratings.average' }
+    }
+  },
+  // Stage 3: Sort by total courses
+  {
+    $sort: { totalCourses: -1 }
+  }
+]);
+```
+
+#### Multi-Stage Pipeline 2: Instructor Analytics
+```javascript
+await Course.aggregate([
+  // Stage 1: Match instructor courses
+  {
+    $match: {
+      instructor: ObjectId(instructorId)
+    }
+  },
+  // Stage 2: Join with enrollments
+  {
+    $lookup: {
+      from: 'enrollments',
+      localField: '_id',
+      foreignField: 'course',
+      as: 'enrollments'
+    }
+  },
+  // Stage 3: Project calculated fields
+  {
+    $project: {
+      title: 1,
+      price: 1,
+      totalEnrollments: { $size: '$enrollments' },
+      activeEnrollments: {
+        $size: {
+          $filter: {
+            input: '$enrollments',
+            cond: { $eq: ['$$this.status', 'active'] }
+          }
+        }
+      },
+      revenue: {
+        $multiply: ['$price', { $size: '$enrollments' }]
+      }
+    }
+  },
+  // Stage 4: Group for totals
+  {
+    $group: {
+      _id: null,
+      courses: { $push: '$$ROOT' },
+      totalRevenue: { $sum: '$revenue' },
+      totalEnrollments: { $sum: '$totalEnrollments' }
+    }
+  }
+]);
+```
+
+#### Multi-Stage Pipeline 3: Update Course Ratings
+```javascript
+// Calculate average rating from enrollments
+const ratings = await Enrollment.aggregate([
+  {
+    $match: {
+      course: courseId,
+      'rating.score': { $exists: true }
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      averageRating: { $avg: '$rating.score' },
+      count: { $sum: 1 }
+    }
+  }
+]);
+```
+
+## 📈 Indexing and Optimization Strategy
+
+### Compound Indexes
+```javascript
+// User email lookup (unique)
+db.users.createIndex({ email: 1 }, { unique: true });
+
+// Course search and filtering
+db.courses.createIndex({ title: 1, category: 1 });
+
+// Instructor dashboard queries
+db.courses.createIndex({ instructor: 1, status: 1 });
+
+// Enrollment uniqueness
+db.enrollments.createIndex({ user: 1, course: 1 }, { unique: true });
+
+// Course analytics
+db.enrollments.createIndex({ course: 1, status: 1 });
+
+// Lesson ordering
+db.lessons.createIndex({ course: 1, order: 1 });
+```
+
+### Query Optimization Examples
+
+#### Before Optimization
+```javascript
+// Slow - No index, full collection scan
+await Course.find({ category: 'programming', level: 'beginner' });
+```
+
+#### After Optimization
+```javascript
+// Fast - Uses compound index { category: 1, level: 1 }
+await Course.find({ category: 'programming', level: 'beginner' })
+  .hint({ category: 1, level: 1 });
+```
+
+### Performance Justification
+
+1. **Email Index**: Ensures fast user authentication lookups
+2. **Category Index**: Speeds up course filtering and search
+3. **Instructor Index**: Optimizes instructor dashboard queries
+4. **Enrollment Compound Index**: Prevents duplicate enrollments and speeds up user course lookups
+5. **Lesson Order Index**: Ensures fast sequential lesson retrieval
+
+## 🔐 Authentication and Authorization
+
+### JWT Implementation
+- Token generated on login/register
+- Token expires in 30 days
+- Stored in localStorage on frontend
+- Sent in Authorization header: `Bearer {token}`
+
+### Role-Based Access Control
+- **Student**: Can view courses, enroll, track progress
+- **Instructor**: Can create/edit/delete own courses and lessons
+- **Admin**: Full access to all resources
+
+### Middleware Protection
+```javascript
+// Protect routes
+router.post('/courses', protect, authorize('instructor', 'admin'), createCourse);
+```
+
+## 🚀 Setup Instructions
+
+### Prerequisites
+- Node.js (v16+)
+- MongoDB (v5+)
+- npm or yarn
+
+### Backend Setup
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Edit .env with your MongoDB URI
+npm run dev
+```
+
+### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Environment Variables
+```env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/online_course_platform
+JWT_SECRET=your_secret_key
+NODE_ENV=development
+```
+
+## 📝 Testing the Application
+
+### Sample API Requests (Postman/Insomnia)
+
+1. Register a user
+2. Login to get token
+3. Create a course (as instructor)
+4. Create lessons for the course
+5. Enroll in course (as student)
+6. Update progress
+7. Add rating
+
+## 🎯 Key Features Implemented
+
+### Database Requirements ✅
+- ✅ CRUD operations across multiple collections
+- ✅ Embedded documents (profile, metadata, ratings)
+- ✅ Referenced documents (users, courses, lessons)
+- ✅ Advanced update operators ($set, $push, $pull, $inc)
+- ✅ Multi-stage aggregation pipelines
+- ✅ Compound indexes
+- ✅ Query optimization
+
+### API Requirements (12+ endpoints) ✅
+1. POST /auth/register
+2. POST /auth/login
+3. GET /auth/me
+4. GET /courses (with pagination, filtering, sorting)
+5. GET /courses/:id
+6. POST /courses
+7. PUT /courses/:id
+8. DELETE /courses/:id
+9. GET /courses/stats/overview (aggregation)
+10. GET /courses/stats/instructor/:id (aggregation)
+11. POST /enrollments
+12. GET /enrollments/my-courses
+13. PUT /enrollments/:id/progress
+14. PUT /enrollments/:id/rating
+15. DELETE /enrollments/:id
+16. GET /lessons/course/:courseId
+17. POST /lessons
+18. PUT /lessons/:id
+19. DELETE /lessons/:id
+
+### Frontend Requirements (6 pages) ✅
+1. Home Page - Browse courses
+2. Course Detail Page - View course information
+3. My Courses Page - Student dashboard
+4. Instructor Dashboard - Manage courses
+5. Create/Edit Course Page - Course management
+6. Login/Register Page - Authentication
+
+### Bonus Features ✅
+- ✅ Proper environment configuration (.env)
+- ✅ Centralized error handling
+- ✅ Pagination, filtering, sorting
+- ✅ JWT authentication & authorization
+- ✅ Password hashing (bcrypt)
+- ✅ Input validation
+- ✅ Professional code structure
+
+## 👥 Team Contribution
+
+### Student 1: Backend & Database
+- Database schema design
+- MongoDB models with Mongoose
+- RESTful API implementation
+- Authentication & authorization
+- Aggregation pipelines
+- Indexing strategy
+
+### Student 2: Frontend & Integration
+- React component development
+- UI/UX design
+- API integration
+- State management
+- Routing implementation
+- User authentication flow
+
+## 📊 Project Statistics
+
+- **Backend**: 5 models, 19+ API endpoints
+- **Frontend**: 6 pages, responsive design
+- **Database**: 4 collections, 6+ indexes
+- **Features**: Authentication, CRUD, Aggregations, Progress tracking
+- **Code Quality**: Modular, well-documented, error-handled
+
+## 🎓 Learning Outcomes
+
+This project demonstrates:
+- Advanced NoSQL database design
+- MongoDB aggregation framework mastery
+- RESTful API best practices
+- Modern full-stack development
+- Security implementation
+- Performance optimization
